@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>记账本 — Caixi</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh;padding:16px}
+.container{max-width:600px;margin:0 auto}
+h1{font-size:20px;font-weight:500;margin-bottom:2px}
+.sub{font-size:12px;color:#aaa;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#ebebeb;border-radius:8px;padding:12px}
+.stat-label{font-size:11px;color:#888;margin-bottom:3px}
+.stat-val{font-size:18px;font-weight:500}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.card-header{padding:9px 14px;border-bottom:0.5px solid rgba(0,0,0,0.08);font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 8px}
+.form-row{display:flex;gap:8px;padding:0 14px 12px}
+select,input[type=text],input[type=number]{font-size:13px;color:#1a1a1a;background:#fff;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;padding:0 10px;height:36px;width:100%;outline:none}
+select:focus,input:focus{border-color:#7F77DD}
+.add-btn{background:#7F77DD;color:#fff;border:none;border-radius:8px;padding:0 14px;height:36px;font-size:13px;cursor:pointer;white-space:nowrap;font-weight:500}
+.add-btn:hover{background:#534AB7}
+.save-btn{background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:0 14px;height:36px;font-size:13px;cursor:pointer;white-space:nowrap;font-weight:500}
+.save-btn:hover{background:#085041}
+.cancel-btn{background:none;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;padding:0 12px;height:36px;font-size:13px;cursor:pointer;color:#888}
+.cancel-btn:hover{background:#f5f4f0}
+.icon-btn{background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:4px;font-size:14px;line-height:1;color:#ccc}
+.icon-btn:hover{background:#f5f4f0}
+.icon-btn.edit:hover{color:#7F77DD;background:#EEEDFE}
+.icon-btn.del:hover{color:#E24B4A;background:#FCEBEB}
+.entry-row{display:grid;grid-template-columns:48px 1fr 72px 52px;gap:6px;align-items:center;padding:9px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05);font-size:13px}
+.entry-row:last-child{border-bottom:none}
+.entry-row.editing{background:#EEEDFE10;border-left:2px solid #7F77DD}
+.edit-form{padding:10px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05);background:#fafafa}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.edit-actions{display:flex;gap:8px}
+.tag{display:inline-flex;align-items:center;font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap}
+.cat-row{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05)}
+.cat-row:last-child{border-bottom:none}
+.bar-wrap{flex:1;background:rgba(0,0,0,0.07);border-radius:3px;height:5px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.budget-bar-wrap{background:rgba(0,0,0,0.07);border-radius:3px;height:7px;overflow:hidden;margin:0 14px 12px}
+.budget-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.filter-row{display:flex;gap:6px;padding:9px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05);flex-wrap:wrap}
+.filter-btn{background:none;border:0.5px solid rgba(0,0,0,0.15);border-radius:20px;padding:3px 9px;font-size:11px;cursor:pointer;color:#888}
+.filter-btn.active{background:#EEEDFE;border-color:#7F77DD;color:#3C3489}
+.empty{padding:20px;text-align:center;font-size:13px;color:#bbb}
+.mnav{background:none;border:0.5px solid rgba(0,0,0,0.15);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;color:#1a1a1a}
+.mnav:hover{background:#f5f4f0}
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr 1fr}
+  .form-grid,.edit-grid{grid-template-columns:1fr}
+  .entry-row{grid-template-columns:44px 1fr 64px 48px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>💰 记账本</h1>
+  <div class="sub">Caixi · 温哥华</div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">本月支出</div><div class="stat-val" id="total-val">$0.00</div></div>
+    <div class="stat"><div class="stat-label">月度预算</div><div class="stat-val">$400</div></div>
+    <div class="stat"><div class="stat-label">剩余</div><div class="stat-val" id="remain-val">$400.00</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px">
+      <span style="font-size:11px;color:#888">预算使用</span>
+      <span id="budget-pct" style="font-size:11px;color:#888">0%</span>
+    </div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar-fill" id="budget-bar" style="width:0%;background:#1D9E75"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">添加记录</div>
+    <div class="form-grid">
+      <select id="cat-sel">
+        <option value="饮食">饮食</option>
+        <option value="交通">交通</option>
+        <option value="娱乐">娱乐</option>
+        <option value="购物">购物</option>
+        <option value="手机/网络">手机/网络</option>
+        <option value="旅行">旅行</option>
+        <option value="其他">其他</option>
+      </select>
+      <input type="number" id="amt-inp" placeholder="金额 (CAD)" min="0" step="0.01">
+    </div>
+    <div class="form-row">
+      <input type="text" id="desc-inp" placeholder="备注（可选）" style="flex:1">
+      <button class="add-btn" onclick="addEntry()">+ 添加</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span>月度分析</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="mnav" onclick="changeMonth(-1)">‹</button>
+        <span id="month-label" style="font-size:12px;font-weight:500;min-width:72px;text-align:center"></span>
+        <button class="mnav" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div id="cat-breakdown"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span>流水记录</span></div>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('全部',this)">全部</button>
+      <button class="filter-btn" onclick="setFilter('饮食',this)">饮食</button>
+      <button class="filter-btn" onclick="setFilter('交通',this)">交通</button>
+      <button class="filter-btn" onclick="setFilter('娱乐',this)">娱乐</button>
+      <button class="filter-btn" onclick="setFilter('购物',this)">购物</button>
+      <button class="filter-btn" onclick="setFilter('旅行',this)">旅行</button>
+      <button class="filter-btn" onclick="setFilter('其他',this)">其他</button>
+    </div>
+    <div id="entries-list"></div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:#ccc;margin-top:12px;padding-bottom:16px">数据存储在本地浏览器</div>
+</div>
+
+<script>
+const CAT_COLORS={'饮食':'#1D9E75','交通':'#378ADD','娱乐':'#7F77DD','购物':'#D4537E','手机/网络':'#888780','旅行':'#D85A30','其他':'#BA7517'};
+const CAT_BG={'饮食':'#E1F5EE','交通':'#E6F1FB','娱乐':'#EEEDFE','购物':'#FBEAF0','手机/网络':'#F1EFE8','旅行':'#FAECE7','其他':'#FAEEDA'};
+const CAT_TEXT={'饮食':'#085041','交通':'#0C447C','娱乐':'#3C3489','购物':'#72243E','手机/网络':'#444441','旅行':'#712B13','其他':'#633806'};
+const BUDGET=400;
+
+let entries=JSON.parse(localStorage.getItem('caixi_expenses')||'[]');
+let idCtr=parseInt(localStorage.getItem('caixi_idctr')||'0');
+let currentFilter='全部';
+let viewDate=new Date();
+let editingId=null;
+
+function save(){
+  localStorage.setItem('caixi_expenses',JSON.stringify(entries));
+  localStorage.setItem('caixi_idctr',String(idCtr));
+}
+function fmt(n){return '$'+n.toFixed(2);}
+function monthKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+
+function changeMonth(dir){
+  viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+dir,1);
+  render();
+}
+function setFilter(cat,btn){
+  currentFilter=cat;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function addEntry(){
+  const cat=document.getElementById('cat-sel').value;
+  const amt=parseFloat(document.getElementById('amt-inp').value);
+  const desc=document.getElementById('desc-inp').value.trim();
+  if(!amt||amt<=0)return;
+  const now=new Date();
+  const date=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  entries.unshift({id:idCtr++,cat,amt,desc,date});
+  save();
+  document.getElementById('amt-inp').value='';
+  document.getElementById('desc-inp').value='';
+  viewDate=now;
+  editingId=null;
+  render();
+}
+
+function deleteEntry(id){
+  if(!confirm('确定删除？'))return;
+  entries=entries.filter(e=>e.id!==id);
+  if(editingId===id)editingId=null;
+  save();
+  render();
+}
+
+function startEdit(id){
+  editingId=(editingId===id)?null:id;
+  render();
+}
+
+function saveEdit(id){
+  const cat=document.getElementById('edit-cat-'+id).value;
+  const amt=parseFloat(document.getElementById('edit-amt-'+id).value);
+  const desc=document.getElementById('edit-desc-'+id).value.trim();
+  if(!amt||amt<=0)return;
+  const e=entries.find(e=>e.id===id);
+  if(e){e.cat=cat;e.amt=amt;e.desc=desc;}
+  editingId=null;
+  save();
+  render();
+}
+
+function cancelEdit(){
+  editingId=null;
+  render();
+}
+
+function catOptions(selected){
+  return ['饮食','交通','娱乐','购物','手机/网络','旅行','其他'].map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('');
+}
+
+function render(){
+  const mk=monthKey(viewDate);
+  const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('month-label').textContent=viewDate.getFullYear()+'年'+months[viewDate.getMonth()];
+
+  const me=entries.filter(e=>e.date.startsWith(mk));
+  const total=me.reduce((s,e)=>s+e.amt,0);
+  const remain=BUDGET-total;
+  const pct=Math.min(Math.round(total/BUDGET*100),100);
+
+  document.getElementById('total-val').textContent=fmt(total);
+  document.getElementById('remain-val').textContent=fmt(remain);
+  document.getElementById('remain-val').style.color=remain<0?'#E24B4A':'#1a1a1a';
+  document.getElementById('budget-pct').textContent=pct+'%';
+  const bar=document.getElementById('budget-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct>90?'#E24B4A':pct>70?'#BA7517':'#1D9E75';
+
+  const bycat={};
+  me.forEach(e=>{bycat[e.cat]=(bycat[e.cat]||0)+e.amt;});
+  const bd=document.getElementById('cat-breakdown');
+  if(!Object.keys(bycat).length){
+    bd.innerHTML='<div class="empty">本月暂无支出</div>';
+  }else{
+    bd.innerHTML=Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{
+      const p=total>0?Math.round(amt/total*100):0;
+      return `<div class="cat-row">
+        <span class="tag" style="background:${CAT_BG[cat]};color:${CAT_TEXT[cat]};min-width:64px;justify-content:center">${cat}</span>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${p}%;background:${CAT_COLORS[cat]}"></div></div>
+        <span style="font-size:11px;color:#bbb;min-width:28px;text-align:right">${p}%</span>
+        <span style="font-size:13px;font-weight:500;min-width:54px;text-align:right">${fmt(amt)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const filtered=me.filter(e=>currentFilter==='全部'||e.cat===currentFilter);
+  const list=document.getElementById('entries-list');
+  if(!filtered.length){
+    list.innerHTML='<div class="empty">没有符合条件的记录</div>';
+  }else{
+    list.innerHTML=filtered.map(e=>{
+      const isEditing=editingId===e.id;
+      const row=`<div class="entry-row${isEditing?' editing':''}">
+        <span style="font-size:11px;color:#bbb">${e.date.slice(5).replace('-','/')}</span>
+        <div style="display:flex;align-items:center;gap:5px;overflow:hidden">
+          <span class="tag" style="background:${CAT_BG[e.cat]};color:${CAT_TEXT[e.cat]}">${e.cat}</span>
+          <span style="color:#bbb;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.desc||''}</span>
+        </div>
+        <span style="font-weight:500;text-align:right">${fmt(e.amt)}</span>
+        <div style="display:flex;gap:2px;justify-content:flex-end">
+          <button class="icon-btn edit" onclick="startEdit(${e.id})" title="编辑">✏️</button>
+          <button class="icon-btn del" onclick="deleteEntry(${e.id})" title="删除">×</button>
+        </div>
+      </div>`;
+
+      const editForm=isEditing?`<div class="edit-form">
+        <div class="edit-grid">
+          <select id="edit-cat-${e.id}">${catOptions(e.cat)}</select>
+          <input type="number" id="edit-amt-${e.id}" value="${e.amt.toFixed(2)}" min="0" step="0.01">
+        </div>
+        <div style="margin-bottom:8px">
+          <input type="text" id="edit-desc-${e.id}" value="${e.desc||''}" placeholder="备注（可选）">
+        </div>
+        <div class="edit-actions">
+          <button class="save-btn" onclick="saveEdit(${e.id})">保存</button>
+          <button class="cancel-btn" onclick="cancelEdit()">取消</button>
+        </div>
+      </div>`:'';
+
+      return row+editForm;
+    }).join('');
+  }
+}
+
+render();
+</script>
+</body>
+</html>
