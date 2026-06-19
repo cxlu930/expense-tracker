@@ -220,7 +220,10 @@ async function addEntry(){
     viewDate=new Date(d.getFullYear(),d.getMonth(),1);
     setSync('ok','已同步');
     render();
-  }catch(e){setSync('err','保存失败');}
+  }catch(e){
+    // 即使报错也重新拉取，因为数据可能已写入
+    await loadAll();
+  }
   btn.disabled=false;btn.textContent='+ 添加记录';
 }
 
