@@ -207,24 +207,30 @@ async function addEntry(){
   const note=document.getElementById('desc-inp').value.trim();
   const date=document.getElementById('date-inp').value||todayStr();
   if(!amt||amt<=0)return;
-  const btn=document.getElementById('add-btn');
-  btn.disabled=true;btn.textContent='保存中...';
+
+  // 乐观更新：先加到本地立即显示
+  const tempId='temp_'+Date.now();
+  entries.unshift({id:tempId,cat,amt,note,date});
+  entries.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('amt-inp').value='';
+  document.getElementById('desc-inp').value='';
+  document.getElementById('date-inp').value='';
+  const d=new Date(date+'T00:00:00');
+  viewDate=new Date(d.getFullYear(),d.getMonth(),1);
+  setSync('loading','同步中...');
+  render();
+
+  // 后台写入数据库
   try{
     await api('POST','expenses',{cat,amt,note,date});
+    // 写入成功后拉取真实数据替换临时记录
     await loadAll();
-    return;
-    document.getElementById('amt-inp').value='';
-    document.getElementById('desc-inp').value='';
-    document.getElementById('date-inp').value='';
-    const d=new Date(date+'T00:00:00');
-    viewDate=new Date(d.getFullYear(),d.getMonth(),1);
-    setSync('ok','已同步');
-    render();
   }catch(e){
-    // 即使报错也重新拉取，因为数据可能已写入
-    await loadAll();
+    // 写入失败就移除临时记录
+    entries=entries.filter(e=>e.id!==tempId);
+    setSync('err','同步失败，请重试');
+    render();
   }
-  btn.disabled=false;btn.textContent='+ 添加记录';
 }
 
 async function deleteEntry(id){
