@@ -155,7 +155,7 @@ select:focus,input:focus{border-color:#7F77DD}
 <script>
 const SUPABASE_URL='https://tyaqadeprxgrgwjnmozp.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5YXFhZGVwcnhncmd3am5tb3pwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MzA2NzQsImV4cCI6MjA5NzMwNjY3NH0._9Zh39Ud5LDkJmalhi3wzBzRrohFp-XyuW1XuLutTGs';
-const H={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+const H={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'};
 
 const CAT_COLORS={'饮食':'#1D9E75','交通':'#378ADD','娱乐':'#7F77DD','购物':'#D4537E','手机/网络':'#888780','旅行':'#D85A30','其他':'#BA7517'};
 const CAT_BG={'饮食':'#E1F5EE','交通':'#E6F1FB','娱乐':'#EEEDFE','购物':'#FBEAF0','手机/网络':'#F1EFE8','旅行':'#FAECE7','其他':'#FAEEDA'};
@@ -210,9 +210,9 @@ async function addEntry(){
   const btn=document.getElementById('add-btn');
   btn.disabled=true;btn.textContent='保存中...';
   try{
-    const row=await api('POST','expenses',{cat,amt,note,date});
-    entries.unshift(Array.isArray(row)?row[0]:row);
-    entries.sort((a,b)=>b.date.localeCompare(a.date)||(b.id-a.id));
+    await api('POST','expenses',{cat,amt,note,date});
+    await loadAll();
+    return;
     document.getElementById('amt-inp').value='';
     document.getElementById('desc-inp').value='';
     document.getElementById('date-inp').value='';
